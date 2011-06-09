@@ -1,0 +1,18 @@
+What is this?
+=============
+
+A simple RESTful server for storing and retrieving blobs.
+
+It's based on Apache2 + mod_perl2.
+
+Installation
+============
+
+For debian/ubuntu installation,
+
+  sudo apt-get install libapache2-mod-perl2
+
+Then "./run"
+
+You should add "./rotate-logs" to a crontab somewhere.
+
