@@ -26,10 +26,14 @@ use Digest::SHA1;
 sub handler {
 	my ($r) = @_;
 
-	if ($r->method ne "POST") {
-                $r->headers_out->set("Allow", "POST");
-                return HTTP_METHOD_NOT_ALLOWED;
-        }
+	# Hmm, that's a shame.  This is taken straight from the
+	# Apache2::RequestRec docs, "if the module can handle only POST method it
+	# could start with..." - but it doesn't work.  :-(
+	use Apache2::Const -compile => qw(M_POST HTTP_METHOD_NOT_ALLOWED);
+	unless ($r->method_number == Apache2::Const::M_POST) {
+		$r->allowed($r->allowed | (1 << Apache2::Const::M_POST));
+		return Apache2::Const::HTTP_METHOD_NOT_ALLOWED;
+	}
 
 	return HTTP_FORBIDDEN
 		if $r->headers_in->get("Content-Type") =~ m{^multipart/}i;
