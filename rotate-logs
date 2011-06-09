@@ -1,0 +1,20 @@
+#!/bin/bash
+
+cd -P .
+
+cat <<EOF > logrotate.conf
+$PWD/log/*log {
+	rotate 4
+	weekly
+	notifempty
+	create
+	compress
+	delaycompress
+	sharedscripts
+	postrotate
+		kill -HUP `cat ./httpd.pid` >/dev/null 2>&1
+	endscript
+}
+EOF
+
+/usr/sbin/logrotate -s logrotate.state logrotate.conf
