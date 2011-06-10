@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd -P .
+cd -P "$( dirname "$0" )"
 
 cat <<EOF > logrotate.conf
 $PWD/log/*log {
