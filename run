@@ -1,8 +1,15 @@
 #!/bin/bash
+
+set -e
+
+cd "$( dirname "$0" )"
+
 export ROOT=$PWD
 export LOGS_DIR=$PWD/log
 export BLOB_DIR=$PWD/blob
 export EMPTY_DIR=$PWD/empty
 export TMP_DIR=$PWD/tmp
+
 mkdir -p $EMPTY_DIR $LOGS_DIR $BLOB_DIR $TMP_DIR
+
 exec /usr/sbin/apache2 -f $PWD/httpd.conf "$@"
