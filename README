@@ -16,3 +16,17 @@ Then "./run"
 
 You should add "./rotate-logs" to a crontab somewhere.
 
+Upstart
+=======
+
+Currently the service is designed to run entirely as a non-root account, and
+can be controlled using upstart.  To do this,
+
+  vim init/blob-server.conf  # customise the path and username
+
+  sudo apt-get install daemontools
+  sudo install -m 644 init/blob-server.conf /etc/init/
+  sudo start blob-server
+
+instead of starting with "./run".
+
