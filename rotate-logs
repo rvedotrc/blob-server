@@ -12,7 +12,7 @@ $PWD/log/*log {
 	delaycompress
 	sharedscripts
 	postrotate
-		kill -HUP `cat ./httpd.pid` >/dev/null 2>&1
+		kill -HUP \`cat ./httpd.pid\` >/dev/null 2>&1
 	endscript
 }
 EOF
