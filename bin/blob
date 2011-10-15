@@ -1,0 +1,111 @@
+#!/bin/bash
+
+set -e
+
+unset http_proxy
+# Redefine this to point to your blob server
+BASE_URL=http://localhost:8080
+
+usage() {
+cat <<EOF
+Usage:
+    blob put < somefile         # store blob, show ID
+    blob get ID                 # show blob
+    blob mv somefile newfile    # store somefile as blob, make newfile a link to it
+    blob fetch [DIR]            # resolve dangling blob symlinks by fetching blobs
+    blob tidy [DIR]             # remove any fetched blobs not referred to by symlinks
+    blob help                   # show this help
+
+EOF
+}
+
+readlink() {
+	if [ -x /bin/readlink ] ; then
+		/bin/readlink "$@"
+	else
+		perl -e '$t = readlink(shift); defined($t) or exit 1; print $t."\n"; exit 0' "$@"
+	fi
+}
+
+if [ "$1" = get ] ; then
+	# blob cat ID
+	# Given an ID, cat it
+	if [ $# != 2 ] ; then usage >&2 ; exit 2 ; fi
+	lwp-request -m GET $BASE_URL/blob/$2
+	exit
+fi
+
+if [ "$1" = put ] ; then
+	# blob put < somefile
+	# Store stdin and show its ID
+	if [ $# != 1 ] ; then usage >&2 ; exit 2 ; fi
+	lwp-request -m POST $BASE_URL/blob/upload
+	exit
+fi
+
+if [ "$1" = mv ] ; then
+	# blob mv existingfile symlink
+	# Store a file, move to blob name, point symlink
+	if [ $# != 3 ] ; then usage >&2 ; exit 2 ; fi
+
+	if [ -e "$3" -a ! -L "$3" ] ; then
+		echo "blob mv: Can't replace non-symlink $3" >&2
+		exit 1
+	fi
+
+	ID=$( blob put < "$2" )
+	DIR="$( dirname "$3" )"
+	BASE="$( basename "$3" )"
+	mv "$2" "$DIR/blob.$ID"
+	rm -f "$DIR/$BASE"
+	ln -s blob.$ID "$DIR/$BASE"
+	exit
+fi
+
+if [ "$1" = fetch ] ; then
+	# blob fetch
+	# Fetch dangling symlinks
+	if [ $# != 1 -a $# != 2 ] ; then usage >&2 ; exit 2 ; fi
+	if [ $# = 2 ] ; then cd "$2" ; fi
+
+	FIND=/usr/bin/find
+	if [ -x /opt/csw/bin/gfind ] ; then FIND=/opt/csw/bin/gfind ; fi
+
+	"$FIND" . -maxdepth 1 -type l | while read LINK ; do
+		if [ -r "$LINK" ] ; then continue ; fi
+		TARGET=$( readlink "$LINK" )
+		case "$TARGET" in
+			blob.*)
+				ID=$( echo "$TARGET" | cut -d. -f2- )
+				blob get $ID > blob.$ID.tmp
+				mv blob.$ID.tmp blob.$ID
+				;;
+		esac
+	done
+	exit
+fi
+
+if [ "$1" = tidy ] ; then
+	# blob tidy
+	# Remove any blobs that aren't referenced by any symlinks
+	if [ $# != 1 -a $# != 2 ] ; then usage >&2 ; exit 2 ; fi
+	if [ $# = 2 ] ; then cd "$2" ; fi
+
+	FIND=/usr/bin/find
+	if [ -x /opt/csw/bin/gfind ] ; then FIND=/opt/csw/bin/gfind ; fi
+
+	comm -13 \
+		<( "$FIND" . -maxdepth 1 -type l -ls | perl -lne '/.* -> (blob\.\S+)$/ and print $1' | sort ) \
+		<( ls -1 | grep '^blob\.' ) \
+		| xargs rm -f
+	exit
+fi
+
+if [ "$1" = help ] ; then
+	usage
+	exit
+fi
+
+usage >&2
+exit 1
+
